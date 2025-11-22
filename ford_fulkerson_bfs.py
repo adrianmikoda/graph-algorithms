@@ -1,61 +1,64 @@
+# Implementation of the ford-fulkerson algorithm using BFS
 from collections import deque
 import math
 
 
-def getPath(vertex, parent, residual_network_values):
+def get_path(vertex, parent, residual_network_capacity):
     path = []
     max_possible_flow_value = math.inf
-    while vertex:
+
+    while parent[vertex] is not None:
         max_possible_flow_value = min(max_possible_flow_value,
-                                      residual_network_values.get((parent[vertex], vertex), math.inf))
+                                      residual_network_capacity.get((parent[vertex], vertex), math.inf))
         path.append(vertex)
         vertex = parent[vertex]
 
+    path.append(vertex)
     return path[::-1], max_possible_flow_value
 
 
-def bfs(start, end, V, residual_network, residual_network_values):
-    stack = deque()
+def bfs(start, end, V, residual_network, residual_network_capacity):
+    queue = deque()
     visited = [False for _ in range(V+1)]
     parent = [None for _ in range(V+1)]
 
     parent[start] = None
     visited[start] = True
-    stack.append(start)
+    queue.append(start)
 
-    while stack:
-        u = stack.popleft()
+    while queue:
+        u = queue.popleft()
 
         if u == end:
-            return getPath(u, parent, residual_network_values)
+            return get_path(u, parent, residual_network_capacity)
 
         for v in residual_network[u]:
-            if not visited[v] and residual_network_values[(u, v)] > 0:
+            if not visited[v] and residual_network_capacity.get((u, v), 0) > 0:
                 parent[v] = u
                 visited[v] = True
-                stack.append(v)
+                queue.append(v)
 
     return None
 
 
 def E_to_residual_network(V, E):
     residual_network = [[] for _ in range(V+1)]
-    residual_network_values = {}
+    residual_network_capacity = {}
 
     for u, v, w in E:
         residual_network[u].append(v)
-        residual_network_values[(u, v)] = w
         residual_network[v].append(u)
-        residual_network_values[(v, u)] = residual_network_values.get((v, u), 0)
+        residual_network_capacity[(u, v)] = w
+        residual_network_capacity[(v, u)] = residual_network_capacity.get((v, u), 0)
 
-    return residual_network, residual_network_values
+    return residual_network, residual_network_capacity
 
 
 def ford_fulkerson_bfs(V, E, start, end):
-    residual_network, residual_network_values = E_to_residual_network(V, E)
+    residual_network, residual_network_capacity = E_to_residual_network(V, E)
 
     cumulative_flow = 0
-    while path_and_max_possible_flow_value := bfs(start, end, V, residual_network, residual_network_values):
+    while path_and_max_possible_flow_value := bfs(start, end, V, residual_network, residual_network_capacity):
 
         path, max_possible_flow_value = path_and_max_possible_flow_value
 
@@ -63,8 +66,8 @@ def ford_fulkerson_bfs(V, E, start, end):
         for i in range(1, len(path)):
             previous_vertex = current_vertex
             current_vertex = path[i]
-            residual_network_values[(previous_vertex, current_vertex)] -= max_possible_flow_value
-            residual_network_values[(current_vertex, previous_vertex)] += max_possible_flow_value
+            residual_network_capacity[(previous_vertex, current_vertex)] -= max_possible_flow_value
+            residual_network_capacity[(current_vertex, previous_vertex)] += max_possible_flow_value
 
         cumulative_flow += max_possible_flow_value
 
